@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-
-import '../data/datasources/notes_api_datasource.dart';
-
+import 'controllers/notes_controller.dart';
 
 class AddNotePage extends StatefulWidget {
-  const AddNotePage({super.key});
+  final NotesController controller;
+
+  const AddNotePage({super.key, required this.controller});
 
   @override
   State<AddNotePage> createState() => _AddNotePageState();
@@ -13,7 +13,6 @@ class AddNotePage extends StatefulWidget {
 class _AddNotePageState extends State<AddNotePage> {
   final titleController = TextEditingController();
   final contentController = TextEditingController();
-  final api = NotesApiDatasource();
 
   bool isLoading = false;
   String? error;
@@ -23,6 +22,41 @@ class _AddNotePageState extends State<AddNotePage> {
     titleController.dispose();
     contentController.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveNote() async {
+    if (titleController.text.isEmpty ||
+        contentController.text.isEmpty) {
+      setState(() {
+        error = "Title and content cannot be empty";
+      });
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+      error = null;
+    });
+
+    try {
+      await widget.controller.add(
+        titleController.text.trim(),
+        contentController.text.trim(),
+      );
+
+      // Go back to notes page
+      if (context.mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      setState(() {
+        error = "Failed to add note";
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -58,40 +92,7 @@ class _AddNotePageState extends State<AddNotePage> {
                 : SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () async {
-                  if (titleController.text.isEmpty ||
-                      contentController.text.isEmpty) {
-                    setState(() {
-                      error = "Title and content cannot be empty";
-                    });
-                    return;
-                  }
-
-                  setState(() {
-                    isLoading = true;
-                    error = null;
-                  });
-
-                  try {
-                    await api.addNote(
-                      titleController.text.trim(),
-                      contentController.text.trim(),
-                    );
-
-                    // Go back to notes page
-                    if (context.mounted) {
-                      Navigator.pop(context, true);
-                    }
-                  } catch (e) {
-                    setState(() {
-                      error = "Failed to add note";
-                    });
-                  } finally {
-                    setState(() {
-                      isLoading = false;
-                    });
-                  }
-                },
+                onPressed: _saveNote,
                 child: const Text("Save Note"),
               ),
             ),

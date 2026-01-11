@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
-
-import 'core/utils/token_storage.dart';
+import 'features/auth/presentation/controllers/auth_controller.dart';
+import 'features/notes/presentation/controllers/notes_controller.dart';
 import 'features/notes/presentation/login_page.dart';
 import 'features/notes/presentation/notes_page.dart';
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final NotesController notesController;
+  final AuthController authController;
+
+  const MyApp({
+    super.key,
+    required this.notesController,
+    required this.authController,
+  });
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -22,9 +29,9 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _checkLogin() async {
-    final token = await TokenStorage.get();
+    final loggedIn = await widget.authController.isLoggedIn();
     setState(() {
-      isLoggedIn = token != null;
+      isLoggedIn = loggedIn;
       isLoading = false;
     });
   }
@@ -39,8 +46,21 @@ class _MyAppState extends State<MyApp> {
       );
     }
 
-    return MaterialApp(
-      home: isLoggedIn ? const NotesPage() : const LoginPage(),
+    return AnimatedBuilder(
+      animation: widget.authController,
+      builder: (context, _) {
+        return MaterialApp(
+          home: isLoggedIn
+              ? NotesPage(
+            controller: widget.notesController,
+            auth: widget.authController,
+          )
+              : LoginPage(
+            auth: widget.authController,
+            notes: widget.notesController,
+          ),
+        );
+      },
     );
   }
 }

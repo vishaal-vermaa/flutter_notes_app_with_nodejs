@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
-
-import '../data/datasources/notes_api_datasource.dart';
+import 'controllers/notes_controller.dart';
 import '../domain/entities/note.dart';
 
 class EditNotePage extends StatefulWidget {
   final Note note;
+  final NotesController controller;
 
-  const EditNotePage({super.key, required this.note});
+  const EditNotePage({
+    super.key,
+    required this.note,
+    required this.controller,
+  });
 
   @override
   State<EditNotePage> createState() => _EditNotePageState();
@@ -15,7 +19,6 @@ class EditNotePage extends StatefulWidget {
 class _EditNotePageState extends State<EditNotePage> {
   late TextEditingController titleController;
   late TextEditingController contentController;
-  final api = NotesApiDatasource();
 
   bool isLoading = false;
   String? error;
@@ -32,6 +35,42 @@ class _EditNotePageState extends State<EditNotePage> {
     titleController.dispose();
     contentController.dispose();
     super.dispose();
+  }
+
+  Future<void> _updateNote() async {
+    if (titleController.text.isEmpty ||
+        contentController.text.isEmpty) {
+      setState(() {
+        error = "Title and content cannot be empty";
+      });
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+      error = null;
+    });
+
+    try {
+      await widget.controller.update(
+        widget.note.id,
+        titleController.text.trim(),
+        contentController.text.trim(),
+      );
+
+      // Go back and signal refresh
+      if (context.mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      setState(() {
+        error = "Failed to update note";
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -55,7 +94,10 @@ class _EditNotePageState extends State<EditNotePage> {
             const SizedBox(height: 20),
 
             if (error != null)
-              Text(error!, style: const TextStyle(color: Colors.red)),
+              Text(
+                error!,
+                style: const TextStyle(color: Colors.red),
+              ),
 
             const SizedBox(height: 10),
 
@@ -64,41 +106,7 @@ class _EditNotePageState extends State<EditNotePage> {
                 : SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () async {
-                  if (titleController.text.isEmpty ||
-                      contentController.text.isEmpty) {
-                    setState(() {
-                      error = "Title and content cannot be empty";
-                    });
-                    return;
-                  }
-
-                  setState(() {
-                    isLoading = true;
-                    error = null;
-                  });
-
-                  try {
-                    await api.updateNote(
-                      widget.note.id,
-                      titleController.text.trim(),
-                      contentController.text.trim(),
-                    );
-
-                    // Go back and signal refresh
-                    if (context.mounted) {
-                      Navigator.pop(context, true);
-                    }
-                  } catch (e) {
-                    setState(() {
-                      error = "Failed to update note";
-                    });
-                  } finally {
-                    setState(() {
-                      isLoading = false;
-                    });
-                  }
-                },
+                onPressed: _updateNote,
                 child: const Text("Update Note"),
               ),
             ),
